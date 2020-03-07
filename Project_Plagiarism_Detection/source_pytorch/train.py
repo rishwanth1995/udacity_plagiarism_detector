@@ -5,6 +5,7 @@ import pandas as pd
 import torch
 import torch.optim as optim
 import torch.utils.data
+import sagemaker_containers
 
 # imports the model in model.py by name
 from model import BinaryClassifier
@@ -104,7 +105,7 @@ if __name__ == '__main__':
     # Do not need to change
     parser.add_argument('--output-data-dir', type=str, default=os.environ['SM_OUTPUT_DATA_DIR'])
     parser.add_argument('--model-dir', type=str, default=os.environ['SM_MODEL_DIR'])
-    parser.add_argument('--data-dir', type=str, default=os.environ['SM_CHANNEL_TRAIN'])
+    parser.add_argument('--data-dir', type=str, default=os.environ['SM_CHANNEL_TRAINING'])
     
     # Training Parameters, given
     parser.add_argument('--batch-size', type=int, default=10, metavar='N',
@@ -117,6 +118,12 @@ if __name__ == '__main__':
     ## TODO: Add args for the three model parameters: input_features, hidden_dim, output_dim
     # Model Parameters
     
+    parser.add_argument('--input_features', type=int, default=2, metavar='IN',
+                        help='number of input features (default: 2)')
+    parser.add_argument('--hidden_dim', type=int, default=100, metavar='H',
+                        help='size of hidden dimension (default: 100)')
+    parser.add_argument('--output_dim', type=int, default=1, metavar='OUT',
+                        help='size of output dimension (default: 1)')
     
     # args holds all passed-in arguments
     args = parser.parse_args()
@@ -135,11 +142,12 @@ if __name__ == '__main__':
     ## TODO:  Build the model by passing in the input params
     # To get params from the parser, call args.argument_name, ex. args.epochs or ards.hidden_dim
     # Don't forget to move your model .to(device) to move to GPU , if appropriate
-    model = None
+    model = BinaryClassifier(args.input_features, args.hidden_dim, args.output_dim).to(device)
+
 
     ## TODO: Define an optimizer and loss function for training
-    optimizer = None
-    criterion = None
+    optimizer = optim.Adam(model.parameters(), lr = 0.001, betas=(0.9, 0.999))
+    criterion = torch.nn.BCELoss()
 
     # Trains the model (given line of code, which calls the above training function)
     train(model, train_loader, args.epochs, criterion, optimizer, device)
@@ -150,8 +158,8 @@ if __name__ == '__main__':
     with open(model_info_path, 'wb') as f:
         model_info = {
             'input_features': args.input_features,
-            'hidden_dim': <add_arg>,
-            'output_dim': <add_arg>,
+            'hidden_dim': args.hidden_dim,
+            'output_dim': args.output_dim,
         }
         torch.save(model_info, f)
         
